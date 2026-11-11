@@ -76,7 +76,7 @@
             </div>
         </div>
 
-        <!-- DAFTAR MENU GRID HP (2 Kolom pas di layar HP) -->
+        <!-- DAFTAR MENU GRID HP -->
         <div>
             <div id="menu-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5"></div>
             <div id="empty-state" class="hidden text-center py-12">
@@ -99,7 +99,7 @@
                     <p class="text-sm sm:text-base md:text-lg font-bold text-white leading-none" id="cart-total-text">Rp 0</p>
                 </div>
             </div>
-            <button onclick="toggleModal('checkout-modal')" class="bg-akekapRed hover:bg-red-700 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm transition shadow-lg flex items-center gap-2">
+            <button onclick="bukaModalCheckout()" class="bg-akekapRed hover:bg-red-700 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm transition shadow-lg flex items-center gap-2">
                 Checkout <i class="fa-solid fa-chevron-right text-[10px]"></i>
             </button>
         </div>
@@ -172,7 +172,7 @@
         </div>
     </div>
 
-    <!-- MODAL STRUK DIGITAL (SIAP CETAK / DOWNLOAD DI HP) -->
+    <!-- MODAL STRUK DIGITAL -->
     <div id="receipt-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex justify-center items-center p-3">
         <div id="receipt-card" class="bg-white text-gray-900 w-full max-w-sm rounded-3xl p-5 shadow-2xl relative overflow-hidden">
             <div class="text-center pb-3 border-b border-dashed border-gray-300">
@@ -334,11 +334,7 @@
             const container = document.getElementById('cart-items');
             if (cart.length === 0) {
                 container.innerHTML = `<div class="text-center py-6"><p class="text-gray-400 text-xs">Keranjang kosong</p></div>`;
-                document.getElementById('btn-submit').disabled = true;
-                document.getElementById('btn-submit').classList.add('opacity-50');
             } else {
-                document.getElementById('btn-submit').disabled = false;
-                document.getElementById('btn-submit').classList.remove('opacity-50');
                 container.innerHTML = cart.map(item => `
                     <div class="flex justify-between items-center bg-gray-900 p-2.5 rounded-xl border border-gray-800">
                         <div class="flex items-center gap-2.5">
@@ -362,6 +358,15 @@
             const m = document.getElementById(id);
             m.classList.toggle('hidden');
             m.classList.toggle('opacity-0');
+        }
+
+        // Fungsi khusus pengaman agar modal checkout selalu terbuka jika keranjang tidak kosong
+        function bukaModalCheckout() {
+            if (cart.length === 0) {
+                alert('Keranjang belanja Anda masih kosong!');
+                return;
+            }
+            toggleModal('checkout-modal');
         }
 
         function toggleTableInput() {
