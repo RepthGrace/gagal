@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - R.M. Akekap</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: { colors: { akekapRed: '#cc0000', akekapBlack: '#1a1a1a' } }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+
+    <!-- ========================================== -->
+    <!-- 1. HALAMAN LOGIN (Awalnya Terlihat) -->
+    <!-- ========================================== -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-akekapRed mb-2">R.M. Akekap</h1>
+                <p class="text-gray-500 font-medium">Panel Admin Khusus Pegawai</p>
+            </div>
+            
+            <form onsubmit="prosesLogin(event)">
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">PIN / Kata Sandi</label>
+                    <input type="password" id="admin-pin" required 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-akekapRed focus:ring-2 focus:ring-red-200 outline-none transition" 
+                           placeholder="Masukkan sandi (admin123)">
+                </div>
+                <button type="submit" class="w-full bg-akekapBlack text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition shadow-lg">
+                    Masuk ke Dashboard
+                </button>
+            </form>
+            <div class="mt-6 text-center">
+                <a href="index.html" class="text-sm text-akekapRed hover:underline font-medium">Kembali ke Halaman Pelanggan</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. HALAMAN DASHBOARD (Awalnya Tersembunyi) -->
+    <!-- ========================================== -->
+    <div id="dashboard-screen" class="hidden min-h-screen">
+        
+        <!-- Navigasi Atas -->
+        <nav class="bg-akekapBlack text-white px-6 py-4 shadow-lg sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-akekapRed text-white p-2 rounded-lg font-bold">AK</div>
+                    <h1 class="text-xl font-bold">Dashboard Admin</h1>
+                </div>
+                <button onclick="prosesLogout()" class="text-sm bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold transition">
+                    Keluar (Logout)
+                </button>
+            </div>
+        </nav>
+
+        <!-- Konten Utama -->
+        <main class="max-w-7xl mx-auto p-6 mt-4">
+            
+            <!-- Kartu Statistik -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-gray-500 uppercase mb-1">Total Pesanan</p>
+                        <h3 class="text-3xl font-black text-akekapBlack" id="stat-total-orders">0</h3>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-full text-akekapRed text-2xl">📝</div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-gray-500 uppercase mb-1">Total Pendapatan</p>
+                        <h3 class="text-3xl font-black text-green-600" id="stat-total-revenue">Rp 0</h3>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-full text-green-600 text-2xl">💰</div>
+                </div>
+            </div>
+
+            <!-- Tabel Modern -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h2 class="text-lg font-bold text-akekapBlack">Riwayat Transaksi Terbaru</h2>
+                    <button onclick="fetchOrders()" class="text-sm text-akekapRed font-bold hover:underline">🔄 Segarkan Data</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-gray-500 text-sm uppercase">
+                            <tr>
+                                <th class="p-4 font-bold">Waktu & Pelanggan</th>
+                                <th class="p-4 font-bold">Tipe & Meja</th>
+                                <th class="p-4 font-bold">Detail Pesanan</th>
+                                <th class="p-4 font-bold text-right">Total (Rp)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order-table-body" class="divide-y divide-gray-100">
+                            <!-- Data akan dimuat di sini -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- LOGIKA JAVASCRIPT -->
+    <!-- ========================================== -->
+    <script>
+        // KREDENSIAL SUPABASE ANDA (Sudah Terisi Otomatis)
+        const SUPABASE_URL = 'https://kncxuoxrygbswwpwmvrl.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_H5E0sFqIQvUg-Mf_DPApMQ_93FwUQk0'; 
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- SISTEM LOGIN SEDERHANA ---
+        // Cek apakah admin sudah login sebelumnya
+        function cekStatusLogin() {
+            const isLoggedIn = localStorage.getItem('akekap_admin_logged_in');
+            if (isLoggedIn === 'true') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard-screen').classList.remove('hidden');
+                fetchOrders(); // Langsung ambil data jika sudah login
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('dashboard-screen').classList.add('hidden');
+            }
+        }
+
+        // Fungsi saat tombol login ditekan
+        function prosesLogin(event) {
+            event.preventDefault();
+            const pinInput = document.getElementById('admin-pin').value;
+            
+            // Password disetel ke: admin123
+            if (pinInput === 'admin123') {
+                localStorage.setItem('akekap_admin_logged_in', 'true');
+                cekStatusLogin();
+            } else {
+                alert('PIN atau Kata Sandi Salah! (Petunjuk: admin123)');
+            }
+        }
+
+        // Fungsi saat tombol logout ditekan
+        function prosesLogout() {
+            localStorage.removeItem('akekap_admin_logged_in');
+            document.getElementById('admin-pin').value = '';
+            cekStatusLogin();
+        }
+
+        // --- SISTEM PENGAMBILAN DATA (DASHBOARD) ---
+        async function fetchOrders() {
+            const tbody = document.getElementById('order-table-body');
+            tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500 font-medium">⏳ Memuat data pesanan...</td></tr>`;
+            
+            const { data, error } = await supabaseClient
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Error: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">Belum ada transaksi.</td></tr>`;
+                document.getElementById('stat-total-orders').innerText = '0';
+                document.getElementById('stat-total-revenue').innerText = 'Rp 0';
+                return;
+            }
+
+            // Hitung Statistik
+            let totalRevenue = 0;
+            data.forEach(order => { totalRevenue += order.total_price; });
+            
+            document.getElementById('stat-total-orders').innerText = data.length;
+            document.getElementById('stat-total-revenue').innerText = 'Rp ' + totalRevenue.toLocaleString('id-ID');
+
+            // Susun Tabel HTML
+            let html = '';
+            data.forEach(order => {
+                const date = new Date(order.created_at).toLocaleString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'});
+                
+                // Desain Label/Badge Tipe Pesanan
+                let badgeClass = order.order_type === 'Dine-in' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700';
+                
+                let detailItems = '';
+                order.order_details.forEach(item => {
+                    detailItems += `<div class="text-sm text-gray-600">• ${item.name} <span class="font-bold">x${item.qty}</span></div>`;
+                });
+
+                html += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-4 align-top">
+                            <div class="font-bold text-akekapBlack">${order.customer_name}</div>
+                            <div class="text-xs text-gray-500 mt-1">${date}</div>
+                        </td>
+                        <td class="p-4 align-top">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${badgeClass}">${order.order_type}</span>
+                            <div class="text-xs text-gray-500 mt-2 font-medium">Meja: <span class="text-akekapBlack font-bold">${order.table_number || '-'}</span></div>
+                        </td>
+                        <td class="p-4 align-top">${detailItems}</td>
+                        <td class="p-4 align-top text-right">
+                            <div class="font-black text-akekapRed">Rp ${order.total_price.toLocaleString('id-ID')}</div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Jalankan pengecekan saat web pertama dibuka
+        cekStatusLogin();
+    </script>
+</body>
+</html>
